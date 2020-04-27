@@ -1,5 +1,9 @@
 import praw
 import reddit_credentials
+from textblob import TextBlob
+import numpy as np
+import re
+
 
 
 class RedditAuthenticator():
@@ -59,8 +63,23 @@ class RedditClient():
         return sub_url
 
 
+class WsbAnalyzer():
+    def clean_comment(self, comment):
+        return ' '.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)", " ", comment).split())
+
+    def analyze_sentiment(self, comment):
+        analysis = TextBlob(self.clean_comment(comment))
+
+        if analysis.sentiment.polarity > 0:
+            return 1
+        elif analysis.sentiment.polarity == 0:
+            return 0
+        else:
+            return -1
+
 if __name__ == '__main__':
     client = RedditClient()
+    wsb_analyzer = WsbAnalyzer()
 
     key_phrase_list = ['What Are Your Moves', 'Daily Discussion Thread']
     subreddit_name = 'wallstreetbets'
@@ -71,5 +90,16 @@ if __name__ == '__main__':
     print("subURL from func: " + sub_url)
     comment_list = client.get_top_comments_by_submission_url(sub_url)
 
+    arr = np.array([wsb_analyzer.analyze_sentiment(comment) for comment in comment_list])
+
+    sentiment = {
+        1: 0,
+        0: 0,
+        -1: 0
+    }
+
+    for item in arr:
+        sentiment[item]+=1
+
     print(len(comment_list))
-    print(comment_list)
+    print(sentiment)
